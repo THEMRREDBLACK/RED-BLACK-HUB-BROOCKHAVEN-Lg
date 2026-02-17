@@ -1,0 +1,37 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local LP = Players.LocalPlayer
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+local IDS = {133241040400728}
+
+local function Clear()
+    if not LP.Character then return end
+    local Hum = LP.Character:FindFirstChildOfClass("Humanoid")
+    if not Hum then return end
+    local Desc = Hum:GetAppliedDescription()
+
+    for _, acc in ipairs(Desc:GetAccessories(true)) do
+        if tonumber(acc.AssetId) then
+            pcall(function() Remotes.Wear:InvokeServer(acc.AssetId) end)
+            task.wait(0.08)
+        end
+    end
+
+    for _, id in ipairs({Desc.Shirt, Desc.Pants, Desc.Face}) do
+        if tonumber(id) then
+            pcall(function() Remotes.Wear:InvokeServer(id) end)
+            task.wait(0.08)
+        end
+    end
+
+    pcall(function()
+        Remotes.ChangeCharacterBody:InvokeServer({0,0,0,0,0,0})
+    end)
+end
+
+Clear()
+for _, id in ipairs(IDS) do
+    pcall(function() Remotes.Wear:InvokeServer(id) end)
+    task.wait(0.12)
+end
