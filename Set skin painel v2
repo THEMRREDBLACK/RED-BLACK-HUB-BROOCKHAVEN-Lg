@@ -1,0 +1,214 @@
+--================ RED BLACK MORPH GUI =================--
+
+if game.CoreGui:FindFirstChild("RB_MorphGui") then
+    game.CoreGui.RB_MorphGui:Destroy()
+end
+
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local TweenService = game:GetService("TweenService")
+
+local LP = Players.LocalPlayer
+local Remotes = ReplicatedStorage:WaitForChild("Remotes")
+
+--================ BASE =================--
+
+local ScreenGui = Instance.new("ScreenGui")
+ScreenGui.Name = "RB_MorphGui"
+ScreenGui.Parent = game.CoreGui
+ScreenGui.ResetOnSpawn = false
+
+local Main = Instance.new("Frame")
+Main.Size = UDim2.new(0, 330, 0, 320)
+Main.Position = UDim2.new(0.5, -165, 0.5, -160)
+Main.BackgroundColor3 = Color3.fromRGB(12,12,12)
+Main.BorderSizePixel = 0
+Main.Parent = ScreenGui
+Main.Active = true
+Main.Draggable = true
+
+Instance.new("UICorner", Main).CornerRadius = UDim.new(0,16)
+
+local Stroke = Instance.new("UIStroke", Main)
+Stroke.Color = Color3.fromRGB(255,0,0)
+Stroke.Thickness = 1.5
+
+--================ TOP BAR =================--
+
+local TopBar = Instance.new("Frame")
+TopBar.Size = UDim2.new(1,0,0,38)
+TopBar.BackgroundColor3 = Color3.fromRGB(18,18,18)
+TopBar.Parent = Main
+Instance.new("UICorner", TopBar).CornerRadius = UDim.new(0,16)
+
+local Title = Instance.new("TextLabel")
+Title.Size = UDim2.new(1,-90,1,0)
+Title.Position = UDim2.new(0,14,0,0)
+Title.BackgroundTransparency = 1
+Title.Text = "Morph GUI - Mr Red Black"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
+Title.TextColor3 = Color3.fromRGB(255,40,40)
+Title.TextXAlignment = Enum.TextXAlignment.Left
+Title.Parent = TopBar
+
+-- Buttons container
+local function createTopButton(text, posX)
+    local Btn = Instance.new("TextButton")
+    Btn.Size = UDim2.new(0,30,0,26)
+    Btn.Position = UDim2.new(1,posX,0,6)
+    Btn.Text = text
+    Btn.Font = Enum.Font.GothamBold
+    Btn.TextSize = 16
+    Btn.BackgroundColor3 = Color3.fromRGB(25,25,25)
+    Btn.TextColor3 = Color3.fromRGB(255,60,60)
+    Btn.Parent = TopBar
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0,8)
+
+    Btn.MouseEnter:Connect(function()
+        TweenService:Create(Btn,TweenInfo.new(0.15),
+            {BackgroundColor3 = Color3.fromRGB(40,0,0)}):Play()
+    end)
+
+    Btn.MouseLeave:Connect(function()
+        TweenService:Create(Btn,TweenInfo.new(0.15),
+            {BackgroundColor3 = Color3.fromRGB(25,25,25)}):Play()
+    end)
+
+    return Btn
+end
+
+local Min = createTopButton("-", -70)
+local Close = createTopButton("X", -35)
+
+Close.MouseButton1Click:Connect(function()
+    ScreenGui:Destroy()
+end)
+
+--================ SCROLL =================--
+
+local Container = Instance.new("Frame")
+Container.Size = UDim2.new(1,-14,1,-52)
+Container.Position = UDim2.new(0,7,0,44)
+Container.BackgroundTransparency = 1
+Container.Parent = Main
+
+local Scroll = Instance.new("ScrollingFrame")
+Scroll.Size = UDim2.new(1,0,1,0)
+Scroll.CanvasSize = UDim2.new(0,0,0,0)
+Scroll.ScrollBarThickness = 4
+Scroll.BackgroundTransparency = 1
+Scroll.Parent = Container
+
+local Layout = Instance.new("UIListLayout", Scroll)
+Layout.Padding = UDim.new(0,6)
+
+Layout:GetPropertyChangedSignal("AbsoluteContentSize"):Connect(function()
+    Scroll.CanvasSize = UDim2.new(0,0,0,Layout.AbsoluteContentSize.Y + 6)
+end)
+
+--================ MINIMIZE =================--
+
+local minimized = false
+local normalSize = Main.Size
+
+Min.MouseButton1Click:Connect(function()
+    minimized = not minimized
+    if minimized then
+        TweenService:Create(Main,TweenInfo.new(0.2),
+            {Size = UDim2.new(0,330,0,38)}):Play()
+        Container.Visible = false
+        Min.Text = "+"
+    else
+        TweenService:Create(Main,TweenInfo.new(0.2),
+            {Size = normalSize}):Play()
+        task.wait(0.18)
+        Container.Visible = true
+        Min.Text = "-"
+    end
+end)
+
+--================ MORPH SYSTEM =================--
+
+local function ClearAvatar()
+    if not LP.Character then return end
+    local Hum = LP.Character:FindFirstChildOfClass("Humanoid")
+    if not Hum then return end
+
+    local Desc = Hum:GetAppliedDescription()
+
+    for _, acc in ipairs(Desc:GetAccessories(true)) do
+        if tonumber(acc.AssetId) then
+            pcall(function()
+                Remotes.Wear:InvokeServer(acc.AssetId)
+            end)
+            task.wait(0.08)
+        end
+    end
+
+    for _, id in ipairs({Desc.Shirt, Desc.Pants, Desc.Face}) do
+        if tonumber(id) then
+            pcall(function()
+                Remotes.Wear:InvokeServer(id)
+            end)
+            task.wait(0.08)
+        end
+    end
+
+    pcall(function()
+        Remotes.ChangeCharacterBody:InvokeServer({0,0,0,0,0,0})
+    end)
+end
+
+local function Equip(ids)
+    ClearAvatar()
+    for _, id in ipairs(ids) do
+        pcall(function()
+            Remotes.Wear:InvokeServer(id)
+        end)
+        task.wait(0.12)
+    end
+end
+
+local function CreateButton(name, ids)
+    local Button = Instance.new("TextButton")
+    Button.Size = UDim2.new(1,0,0,32)
+    Button.BackgroundColor3 = Color3.fromRGB(20,20,20)
+    Button.TextColor3 = Color3.fromRGB(255,60,60)
+    Button.Font = Enum.Font.GothamBold
+    Button.TextSize = 13
+    Button.Text = name
+    Button.Parent = Scroll
+    Instance.new("UICorner", Button).CornerRadius = UDim.new(0,10)
+
+    Button.MouseEnter:Connect(function()
+        TweenService:Create(Button,TweenInfo.new(0.15),
+            {BackgroundColor3 = Color3.fromRGB(40,0,0)}):Play()
+    end)
+
+    Button.MouseLeave:Connect(function()
+        TweenService:Create(Button,TweenInfo.new(0.15),
+            {BackgroundColor3 = Color3.fromRGB(20,20,20)}):Play()
+    end)
+
+    Button.MouseButton1Click:Connect(function()
+        Equip(ids)
+    end)
+end
+
+--================ BUTTONS =================--
+
+CreateButton("SCP 096",{122525757786390,115245217017882,78693304517625,124550867145015,93189673326787,87506087131742})
+CreateButton("GIGA CHAD",{72816718634512,99054994739343,86002021444094,110987043653448,133241385243827,128481536574362})
+CreateButton("BIG GUY",{93091952418260,128174385000470,125260983855340,120276437746185,119435358144550,104021827501771})
+CreateButton("BROWN CHICKEN",{89076492775539,137468680973744,97912635731079,129296627608219,115519645430915,107703477979598})
+CreateButton("MONKEY",{133241040400728})
+CreateButton("MIKE",{108792046953186})
+CreateButton("DUCK",{115968302106152})
+CreateButton("SID",{106215593690612})
+CreateButton("DOGE",{135861229178903})
+CreateButton("SQUIRREL",{12954546076})
+CreateButton("SAHUR",{117976702168543})
+CreateButton("KAWASAKI",{111805676367670,77183815067135,105619748183867,94880365593065,101184115282024,106426828407785})
+CreateButton("WORM",{18347718887,18347715458,18347713095,18347715441,18347715493,18347715502})
+CreateButton("PIGEON",{134936622364544})
